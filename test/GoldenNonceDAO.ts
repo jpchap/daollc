@@ -20,7 +20,7 @@ describe("Golden Nonce DAO Token", function () {
     const usdc = await USDC.deploy(ten_thousand);
 
     const GNDT = await ethers.getContractFactory("GoldenNonceDAO");
-    const gndt = await GNDT.deploy(ten_thousand, usdc.address);
+    const gndt = await GNDT.deploy();
 
     await ethers.getContractFactory("GoldenNonceDAO");
 
@@ -37,14 +37,7 @@ describe("Golden Nonce DAO Token", function () {
       expect(gndt).to.not.equal(null);
 
       expect(await usdc.balanceOf(jack.address)).to.equal(ten_thousand);
-      const setfactory = await ethers.getContractFactory("Set")
-      const members = await setfactory.attach(await gndt.members());
-      
-      expect(await members.length()).to.equal(2);
-      expect(await members.elements(0)).to.equal("0x0000000000000000000000000000000000000000");
-      expect(await members.elements(1)).to.equal(jack.address);
       expect(await gndt.balanceOf(jack.address)).to.equal(ten_thousand);
-      
     });
 
     it("real world LLC set up works", async function () {
@@ -58,18 +51,13 @@ describe("Golden Nonce DAO Token", function () {
       expect(await gndt.balanceOf(jack.address)).to.equal(five_thousand);
       expect(await gndt.balanceOf(grant.address)).to.equal(await gndt.balanceOf(jack.address))
 
-      const setfactory = await ethers.getContractFactory("Set")
-      const members = await setfactory.attach(await gndt.members());
-
-      expect(await members.elements(1)).to.equal(jack.address);
-      expect(await members.elements(2)).to.equal(grant.address);
-
       // send USDC to the contract, make sure it gets split 50 / 50
       expect(await usdc.balanceOf(jack.address)).to.equal(ten_thousand);
       expect(await usdc.balanceOf(grant.address)).to.equal(0);
       await usdc.connect(jack).transfer(gndt.address, ten_thousand)
 
-      await gndt.pay_members();
+      // Show that we can withdraw tokens with the contract as well
+      await gndt.distribute(usdc.address);
 
       expect(await usdc.balanceOf(grant.address)).to.equal(five_thousand);
       expect(await usdc.balanceOf(jack.address)).to.equal(five_thousand);
@@ -92,11 +80,8 @@ describe("Golden Nonce DAO Token", function () {
         subsidiary.connect(grant).transferOwnership(grant.address)
       ).to.be.revertedWith("Ownable: caller is not the owner");
       
-      // change owner to gndt
+      // use jack wallet to change owner to gndt
       await subsidiary.transferOwnership(gndt.address);
-
-      // add subsidiary to gndt
-      await gndt.add_subsidiary(subsidiary.address);
 
       // verify non-owner cannot withdraw
       await expect(
@@ -113,11 +98,18 @@ describe("Golden Nonce DAO Token", function () {
 
       expect(await usdc.balanceOf(subsidiary.address)).to.equal(ten_thousand);
 
-      // distribute monies from contract
-      await gndt.pay_members();
+      // withdraw and distribute monies from contract
+      await gndt.withdraw(subsidiary.address, usdc.address);
+      await gndt.distribute(usdc.address);
 
       expect(await usdc.balanceOf(grant.address)).to.equal(five_thousand);
       expect(await usdc.balanceOf(jack.address)).to.equal(five_thousand);
     });
+
+    // TODO: additional tests
+
+    // test we can distribute to n-many wallets
+
+    // test we can distribute to n-many wallets and change the number multiple times and use different ERC20s
   });
 });
