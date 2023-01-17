@@ -8,4 +8,4 @@ the DAO LLC contract is in the contracts folder under GoldenNonceDAO.sol
 
 the test cases are in the test folder under GoldenNonceDAO.ts
 
-to deploy the contract, use `npx hardhat scripts/deploy.ts` and be sure to specify a network
+to deploy the contract, use `npx hardhat run scripts/deploy.ts` and be sure to specify a network
