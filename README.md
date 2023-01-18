@@ -1,13 +1,11 @@
-# Sample Hardhat Project
+This project uses hardhat to run everything
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+`npm install` to get all the packages
 
-Try running some of the following tasks:
+`npx hardhat test` to run the test cases
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
-```
+the DAO LLC contract is in the contracts folder under GoldenNonceDAO.sol
+
+the test cases are in the test folder under GoldenNonceDAO.ts
+
+to deploy the contract, use `npx hardhat run scripts/deploy.ts` and be sure to specify a network
