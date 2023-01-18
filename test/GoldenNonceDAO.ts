@@ -64,11 +64,11 @@ describe("Golden Nonce DAO Token", function () {
       expect(await usdc.balanceOf(grant.address)).to.equal(await gndt.balanceOf(jack.address))
     });
 
-    it("LLC can own another contract", async function () {
+    it("GNDT can own another contract", async function () {
       const { jack, grant, usdc, gndt } = await deployGNDT();
       await gndt.transfer(grant.address, five_thousand);
 
-      // deployer creates OwnableMock
+      // deployer creates subsidiary
       const SUBSIDIARY = await ethers.getContractFactory("Subsidiary");
       const subsidiary = await SUBSIDIARY.deploy();
 
@@ -106,10 +106,101 @@ describe("Golden Nonce DAO Token", function () {
       expect(await usdc.balanceOf(jack.address)).to.equal(five_thousand);
     });
 
-    // TODO: additional tests
+    // test we can withdraw funds from multiple subsidiaries without issue
+    it("GNDT can withdraw funs from arbitrary / random number of subsidiaries", async function () {
+      const { jack, grant, usdc, gndt } = await deployGNDT();
+
+      const amount = Math.floor(Math.random() * 20);
+
+      let totalSupply = 10000;
+
+      let subsidiaries = [];
+      for (let i = 0; i < amount; i++) {
+        // deployer creates subsidiary
+        const SUBSIDIARY = await ethers.getContractFactory("Subsidiary");
+        const subsidiary = await SUBSIDIARY.deploy();
+        subsidiaries.push(subsidiary)
+
+        const money = Math.floor(Math.random() * totalSupply / 2);
+        totalSupply -= money;
+        await usdc.transfer(subsidiary.address, money);
+      }
+
+      // expect failure as nothing has been withdrawn
+      await expect(
+        gndt.distribute(usdc.address)
+      ).to.be.revertedWith("DAO LLC: nothing to distribute");
+
+      for (let i = 0; i < amount; i++) {
+        await subsidiaries[i].transferOwnership(gndt.address);
+        await gndt.withdraw(subsidiaries[i].address, usdc.address);
+
+        await expect(
+          gndt.withdraw(subsidiaries[i].address, gndt.address)
+        ).to.be.revertedWith("No tokens to withdraw");
+      }
+
+      let jbalance = await usdc.balanceOf(jack.address);
+      await expect(jbalance).to.not.equal(await usdc.totalSupply());
+
+      // Show that we can withdraw tokens with the contract as well
+      await gndt.connect(jack).distribute(usdc.address);
+
+      jbalance = await gndt.balanceOf(jack.address);
+      await expect(jbalance).to.equal(await usdc.totalSupply());
+    })
 
     // test we can distribute to n-many wallets
+    it("GNDT can distribute to arbitrary / random number of wallets", async function () {
+      const { jack, grant, usdc, gndt } = await deployGNDT();
 
-    // test we can distribute to n-many wallets and change the number multiple times and use different ERC20s
+      const amount = Math.floor(Math.random() * 20);
+
+      let totalSupply = 10000;
+
+      let signers = [];
+      for (let i = 0; i < amount; i++) {
+        signers.push(ethers.Wallet.createRandom())
+        const equity = Math.floor(Math.random() * totalSupply / 2);
+        totalSupply -= equity;
+        await gndt.connect(jack).transfer(signers[signers.length - 1].address, equity);
+
+        const balance = await gndt.balanceOf(signers[signers.length - 1].address);
+      }
+
+      await usdc.connect(jack).transfer(gndt.address, ten_thousand)
+
+      // Show that we can withdraw tokens with the contract as well
+      await gndt.distribute(usdc.address);
+
+
+      for (let i = 0; i < amount; i++) {
+        const balance = await usdc.balanceOf(signers[i].address);
+        expect(await gndt.balanceOf(signers[i].address)).to.equal(balance);
+      }
+
+      const jbalance = await usdc.balanceOf(jack.address);
+      expect(await gndt.balanceOf(jack.address)).to.equal(jbalance);
+    })
+
+    // test what happens if we give gndt to the gndt contract
+    it("GNDT equity cannot be held by GNDT contract", async function () {
+      const { jack, grant, usdc, gndt } = await deployGNDT();
+
+      // transfer gndt to gndt contract
+      await expect (
+        gndt.transfer(gndt.address, five_thousand)
+      ).to.be.revertedWith("DAO LLC: cannot send tokens to the company");
+    })
+
+    // test what happens if we burn gndt
+    it("GNDT equity cannot be burned", async function () {
+      const { jack, grant, usdc, gndt } = await deployGNDT();
+
+      // cannot burn tokens
+      await expect (
+        gndt.transfer(ethers.constants.AddressZero, ten_thousand)
+      ).to.be.revertedWith("ERC20: transfer to the zero address");
+    })
   });
 });

@@ -28,7 +28,8 @@ contract GoldenNonceDAO is ERC20 {
 
     /// @dev called by ERC20 before moving tokens from sender to receiver
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-        if (to == address(0) || amount == 0) return;
+        require(to != address(this), "DAO LLC: cannot send tokens to the company");
+        if (amount == 0) return;
         if (balanceOf(to) == 0) add(to);
     }
 
