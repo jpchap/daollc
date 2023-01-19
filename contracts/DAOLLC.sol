@@ -1,22 +1,20 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./Subsidiary.sol";
 
-/* 
- * This contract represents equity in the DAO LLC
- */
-contract GoldenNonceDAO is ERC20 {
-    address[] public members; // allows us to iterate over members
+/// @title Code for DAO LLC equity
+/// @author Jack Chapman
+contract DAOLLC is ERC20 {
+    address[] public members; /// @dev keep track of who owns tokens
 
     /// @dev add to member set
-    function add(address member) internal {
+    function _add(address member) internal {
         members.push(member);
     }
 
     /// @dev remove from member set
-    function remove(address member) internal {
+    function _remove(address member) internal {
         for (uint256 i = 0; i < members.length; i++) {
             if (members[i] == member) {
                 members[i] = members[members.length - 1];
@@ -26,32 +24,28 @@ contract GoldenNonceDAO is ERC20 {
         }
     }
 
-    /// @dev called by ERC20 before moving tokens from sender to receiver
+    /// @dev ERC20 calls before transfer from sender to receiver
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         require(to != address(this), "DAO LLC: cannot send tokens to the company");
         if (amount == 0) return;
-        if (balanceOf(to) == 0) add(to);
+        if (balanceOf(to) == 0) _add(to);
     }
 
-    /// @dev called ERC20 after moving tokens from sender to receiver
+    /// @dev ERC20 calls after transfer from sender to receiver
     function _afterTokenTransfer(address from, address to, uint256 amount) internal override {
         if (from == address(0) || amount == 0) return;
-        if (balanceOf(from) == 0) remove(from);
+        if (balanceOf(from) == 0) _remove(from);
     }
     
+    /// @dev please reuse with different name and symbol
     constructor() ERC20("Golden Nonce DAO LLC", "GNDT") {
         _mint(msg.sender, 10000 * (10 ** decimals()));
     }
 
-    /// @dev withdraw ERC20 token from subsidiary contract
-    function withdraw(address subsidiary, address token) public {
-        Subsidiary(subsidiary).withdraw(token);
-    }
-
-    /// @dev distribute ERC20 token proporitionally to members
+    /// @dev distribute ERC20 token according to equity
     function distribute(address token) public {
         uint256 token_balance = ERC20(token).balanceOf(address(this));
-        require(token_balance > 0, "DAO LLC: nothing to distribute");
+        require(token_balance > members.length, "DAO LLC: insufficient funds for distribution");
 
         for (uint256 i = 0; i < members.length; i++) {
             address member = members[i];
