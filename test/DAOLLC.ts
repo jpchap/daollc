@@ -164,7 +164,7 @@ describe("DAO LLC", function () {
         const subsidiary = await SUBSIDIARY.deploy();
         subsidiaries.push(subsidiary)
 
-        const money = Math.floor(Math.random() * totalSupply / 2);
+        const money = 1 + Math.floor(Math.random() * totalSupply / 2);
         totalSupply -= money;
         await usdc.transfer(subsidiary.address, money);
       }
