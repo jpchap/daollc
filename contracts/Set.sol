@@ -2,11 +2,11 @@
 pragma solidity ^0.8.9;
 
 // Uncomment this line to use console.log
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// TODO: make sure the zero indexing always works!
 
+/// @dev depricated, but potentially useful if you want to track more than just members
 contract Set is Ownable { // TODO: consider how ridiculous an ownable Set is...
     address[] public elements;
     mapping (address => uint256) public indices;
